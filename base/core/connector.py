@@ -1,5 +1,4 @@
 import pymysql
-from pymysql.cursors import DictCursor
 
 
 class Connector:
@@ -9,3 +8,4 @@ class Connector:
         password='',
         db='ymyahin_shop',
     )
+    cursor = connector.cursor()

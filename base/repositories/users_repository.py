@@ -1,5 +1,7 @@
-from repository import Repository
+from base.repositories.repository import Repository
+from base.models.user_model import UserModel
 
 
-class UsersRespository(Repository):
-    pass
+class UsersRepository(Repository):
+    model = UserModel()
+    table = "users"

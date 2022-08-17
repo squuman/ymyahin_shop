@@ -1,5 +1,7 @@
-from repository import Repository
+from base.repositories.repository import Repository
+from base.models.product_model import ProductModel
 
 
-class ProductsRespository(Repository):
-    pass
+class ProductsRepository(Repository):
+    model = ProductModel
+    table = "products"

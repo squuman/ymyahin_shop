@@ -9,6 +9,7 @@ class Keyboards:
         keyboard = ReplyKeyboardMarkup()
         keyboard.add(KeyboardButton("Каталог"))
         keyboard.add(KeyboardButton("Корзина"))
+
         return keyboard
 
     @staticmethod
@@ -22,3 +23,10 @@ class Keyboards:
     @staticmethod
     def admin_menu():
         return 1
+
+    @staticmethod
+    def back_menu():
+        keyboard = ReplyKeyboardMarkup()
+        keyboard.add(KeyboardButton("Назад"))
+
+        return keyboard
