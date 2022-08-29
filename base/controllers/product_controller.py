@@ -14,7 +14,7 @@ class ProductController(Controller):
             keyboard = InlineKeyboardMarkup()
             keyboard.add(InlineKeyboardButton("Добавить в корзину", callback_data=f"add_to_cart_{product[0]}"))
             products_keyboard.append({
-                "text": f"{product[1]}\n{product[3]}\n{product[2]}",
+                "text": f"{product[0]}\n{product[2]}\n{product[1]}",
                 "keyboard": keyboard
             })
 

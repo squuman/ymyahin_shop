@@ -5,7 +5,7 @@ class Connector:
     connector = pymysql.connect(
         host='localhost',
         user='root',
-        password='',
+        password='root',
         db='ymyahin_shop',
     )
     cursor = connector.cursor()
