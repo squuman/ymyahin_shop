@@ -2,10 +2,10 @@ class Controller:
     repository = None
 
     def get(self):
-        pass
+        return self.repository.get_data()
 
-    def post(self):
-        pass
+    def create(self, values: list):
+        self.repository.insert_data(values)
 
     def put(self):
         pass

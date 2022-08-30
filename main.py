@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from config import config
 from aiogram import Bot, Dispatcher, types
 from aiogram.dispatcher.filters.state import State, StatesGroup
@@ -41,24 +42,21 @@ async def cart_page_command_handler(message: types.Message):
 async def admin_page_command_handler(message: types.Message):
     await BotStates.admin.set()
     keyboards = InlineKeyboardMarkup()
-    btn1 = InlineKeyboardButton("Заказы", callback_data='c_orders')
-    btn2 = InlineKeyboardButton("Пользователи", callback_data='c_users') #Кнопки админа
-    keyboards.add(btn1)
-    keyboards.add(btn2)
+    # Кнопки админа
+    keyboards.add(InlineKeyboardButton("Заказы", callback_data='list_orders'))
+    keyboards.add(InlineKeyboardButton("Пользователи", callback_data='list_users'))
     await bot.send_message(message.chat.id, text='Выберите действие', reply_markup=keyboards)
 
 
 async def admin_callback_handler(call: types.CallbackQuery):
-    print(call.data)
-    if call.data == 'c_orders':
+    if call.data == 'list_orders':
         for order in order_controller.get_orders_keyboards():
             await call.message.answer(text=order['text'])
-    elif call.data == 'c_users':
+    elif call.data == 'list_users':
         for user in user_controller.get_users_keyboards():
             await call.message.answer(text=user['text'])
     else:
-        await call.message.answer(text="Fuck You, Leatherhead!")
-
+        logging.warning("unknown callback data")
 
 
 async def add_to_cart_handler(callback_query: types.CallbackQuery):
@@ -73,7 +71,8 @@ async def register_handlers(dp):
 
     dp.register_callback_query_handler(add_to_cart_handler, lambda c: c.data and c.data.startswith("add_to_cart"),
                                        state=BotStates.catalog_page)
-    dp.register_callback_query_handler(admin_callback_handler, lambda c: c.data and c.data.startswith("c_"), state=BotStates.admin)
+    dp.register_callback_query_handler(admin_callback_handler, lambda c: c.data and c.data.startswith("list_"),
+                                       state=BotStates.admin)
 
 
 async def main():
