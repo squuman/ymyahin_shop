@@ -19,3 +19,6 @@ class ProductController(Controller):
             })
 
         return products_keyboard
+
+    def get_product(self, product_id):
+        return self.repository.get_data(additional_condition=f"WHERE id like {product_id}")

@@ -14,3 +14,6 @@ class UserController(Controller):
                 "text": f"{user[0]}\n{user[1]}\n{user[2]}"
             })
         return users_keyboard
+
+    def get_user(self, telegram_id):
+        self.repository.get_data(additional_condition=f"WHERE telegram_id = {telegram_id}")
