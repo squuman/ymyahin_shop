@@ -48,7 +48,7 @@ async def catalog_page_command_handler(message: types.Message):
 async def cart_page_command_handler(message: types.Message):
     await BotStates.cart_page.set()
     await user_information(message)
-    await bot.send_message(message.chat.id, text="В вашей карзине следующие товары:")
+    await bot.send_message(message.chat.id, text="В вашей корзине следующие товары:")
     global user_id
     user_id = await get_user_id_by_telegram_id()
     if(str(user_id).isnumeric()):
