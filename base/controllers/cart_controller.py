@@ -11,7 +11,7 @@ class CartController(Controller):
         if len(cart) > 0 and cart[0][1] != '[]':
             return json.loads(cart[0][1], strict=False)
         else:
-            return "EMPTY"
+            return []
 
     def get_user_cart(self, user_id):
         return self.repository.get_data(additional_condition=f" WHERE user_id like {user_id} AND is_open like 1")

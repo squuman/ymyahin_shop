@@ -1,6 +1,6 @@
-TOKEN = "5588549776:AAENcLYZFqF24PFXYp_4yQWe3AQR1GZUAGE"
+TOKEN = "5615839518:AAFgWUi0WwIErQVCkUKhAvfBI1M3nLr1QWg"
 
 HOST = 'localhost'
-DATABASE = 'ymyahin_shop_db'
+DATABASE = 'ymyahin_shop'
 USER = 'root'
-PASSWORD = ''
+PASSWORD = 'root'
