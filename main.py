@@ -34,6 +34,14 @@ class BotStates(StatesGroup):
     orders_page = State()
 
 
+async def start_page_command_handler(message: types.Message):
+    await user_information(message)
+    user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name,
+                                                         telegram_user_nickname)
+    if user_id == None:
+        user_controller.create_user(telegram_user_id, telegram_user_name, telegram_user_nickname)
+        user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name,
+                                                             telegram_user_nickname)
 
 
 async def main_page_command_handler(message: types.Message):
@@ -67,10 +75,6 @@ async def orders_page_command_handler(message: types.Message):
     if user_id == -1:
         user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name,
                                                              telegram_user_nickname)
-        if user_id == None:
-            user_controller.create_user(telegram_user_id, telegram_user_name, telegram_user_nickname)
-            user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name,
-                                                                 telegram_user_nickname)
     try:
         await bot.send_message(message.chat.id, text="Ваши заказы:")
         orders_list = order_controller.get_user_orders(user_id)
@@ -105,10 +109,6 @@ async def cart_page_command_handler(message: types.Message):
         if user_id == -1:
             user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name,
                                                                  telegram_user_nickname)
-            if user_id == None:
-                user_controller.create_user(telegram_user_id, telegram_user_name, telegram_user_nickname)
-                user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name,
-                                                                     telegram_user_nickname)
         if str(user_id).isnumeric():
             cart_items_list = cart_controller.get_cart_items_list(user_id)
             if cart_items_list == []:
@@ -180,9 +180,6 @@ async def admin_page_command_handler(message: types.Message):
     await BotStates.admin.set()
     await user_information(message)
     user = user_controller.get_user(telegram_user_id)
-    if user == None:
-        user_controller.create_user(telegram_user_id, telegram_user_name, telegram_user_nickname)
-        user = user_controller.get_user(telegram_user_id)
     if user[4] == 1:
         keyboards = InlineKeyboardMarkup()
         # Кнопки админа
@@ -210,10 +207,6 @@ async def add_to_cart_handler(callback_query: types.CallbackQuery):
     if user_id == -1:
         user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name,
                                                              telegram_user_nickname)
-        if user_id == None:
-            user_controller.create_user(telegram_user_id, telegram_user_name, telegram_user_nickname)
-            user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name,
-                                                                 telegram_user_nickname)
 
     if str(user_id).isnumeric():
         product_id = callback_query.data.split("add_to_cart_")
@@ -261,8 +254,23 @@ async def user_information(message):
     global telegram_user_id, telegram_user_nickname, telegram_user_name
     if telegram_user_id == -1:
         telegram_user_id = str(message.from_user.id)
-        telegram_user_name = "\'" + message.from_user.first_name + " " + message.from_user.last_name + "\'"
-        telegram_user_nickname = "\'" + message.from_user.username + "\'"
+
+        telegram_user_name = ""
+        if message.from_user.first_name is not None:
+            telegram_user_name += message.from_user.first_name
+        telegram_user_name += " "
+        if message.from_user.last_name is not None:
+            telegram_user_name += message.from_user.last_name
+        telegram_user_name = telegram_user_name.strip()
+        if telegram_user_name == "":
+            telegram_user_name = "\'No name\'"
+        else:
+            telegram_user_name = f"\'{telegram_user_name}\'"
+
+        if message.from_user.username is None:
+            telegram_user_nickname = f"\'No username\'"
+        else:
+            telegram_user_nickname = f"\'{message.from_user.username}\'"
 
 
 async def order_create_callback(call: types.CallbackQuery):
@@ -271,10 +279,6 @@ async def order_create_callback(call: types.CallbackQuery):
         if user_id == -1:
             user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name,
                                                                  telegram_user_nickname)
-            if user_id == None:
-                user_controller.create_user(telegram_user_id, telegram_user_name, telegram_user_nickname)
-                user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name,
-                                                                     telegram_user_nickname)
         cart_items_list = cart_controller.get_cart_items_list(user_id)
         sum = 0
         for product in cart_items_list:
@@ -295,7 +299,7 @@ async def register_handlers(dp):
     dp.register_message_handler(cart_page_command_handler, commands='cart_page', state='*')
     dp.register_message_handler(admin_page_command_handler, commands='admin', state='*')
     dp.register_message_handler(orders_page_command_handler, commands='orders_page', state='*')
-    dp.register_message_handler()
+    dp.register_message_handler(start_page_command_handler, commands='start', state='*')
 
     dp.register_callback_query_handler(add_to_cart_handler, lambda c: c.data and c.data.startswith("add_to_cart"),
                                        state=BotStates.catalog_page)
