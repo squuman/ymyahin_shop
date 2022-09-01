@@ -6,6 +6,6 @@ def up():
         id int primary key AUTO_INCREMENT,\
         user_id int,\
         products text,\
-        sum int,\
+        sum bigint,\
         FOREIGN key (user_id) REFERENCES users (id)\
     );")

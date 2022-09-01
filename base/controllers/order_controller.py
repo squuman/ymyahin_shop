@@ -14,3 +14,10 @@ class OrderController(Controller):
                 "text": f"{order[0]}\n{order[1]}\n{order[2]}"
             })
         return orders_keyboard
+
+
+    def get_user_orders(self, user_id):
+        return self.repository.get_data(additional_condition=f" WHERE user_id LIKE {user_id}")
+
+    def create_order(self, values: list):
+        return self.create(values)

@@ -31,16 +31,58 @@ class BotStates(StatesGroup):
     catalog_page = State()
     cart_page = State()
     admin = State()
+    orders_page = State()
 
 
 async def main_page_command_handler(message: types.Message):
     await BotStates.main_page.set()
     await user_information(message)
+    keyboards = types.InlineKeyboardMarkup()
+    keyboards.add(InlineKeyboardButton("Показать каталог", callback_data='show_catalog'))
+    keyboards.add(InlineKeyboardButton("Открыть корзину", callback_data='show_cart'))
+    keyboards.add(InlineKeyboardButton("Показать мои заказы", callback_data='show_orders'))
+    user_name = telegram_user_name.replace("\'", "")
+    await bot.send_message(message.chat.id, text=f'Здравствуйте, {user_name}! Выберите одно из следующих действий', reply_markup=keyboards)
+
+async def main_page_callback(call: types.CallbackQuery):
+    choose = call.data.split('_')[1]
+    if choose == "catalog":
+        await catalog_page_command_handler(call.message)
+    elif choose == "cart":
+        await cart_page_command_handler(call.message)
+    elif choose == "orders":
+        await orders_page_command_handler(call.message)
+    else:
+        await call.message.answer("Ошибка!")
+
+async def orders_page_command_handler(message: types.Message):
+    await BotStates.orders_page.set()
+    await user_information(message)
+    global user_id
+    if user_id == -1:
+        user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name, telegram_user_nickname)
+    try:
+        await bot.send_message(message.chat.id, text="Ваши заказы:")
+        orders_list = order_controller.get_user_orders(user_id)
+        if len(orders_list) > 0:
+            for order in orders_list:
+                products = json.loads(order[2], strict=False)
+                order_description = f"Заказ №{order[0]}:\n"
+                for product in products:
+                    print(product)
+                    order_description += f'''Продукт {product["id"][1]} стоимостью {product["id"][2]} в количестве {product["amount"]}\n'''
+                order_description += f"Итоговая стоимость: {order[3]}"
+                await bot.send_message(message.chat.id, text=order_description)
+        else:
+            await bot.send_message(message.chat.id, text="У вас нет заказов")
+    except Exception as e:
+        print(e)
 
 
 async def catalog_page_command_handler(message: types.Message):
     await BotStates.catalog_page.set()
     await user_information(message)
+    await bot.send_message(message.chat.id, text="Каталог товаров:")
     for product in product_controller.get_products_keyboards():
         await bot.send_message(message.chat.id, text=product['text'], reply_markup=product['keyboard'])
 
@@ -50,20 +92,30 @@ async def cart_page_command_handler(message: types.Message):
     await user_information(message)
     await bot.send_message(message.chat.id, text="В вашей корзине следующие товары:")
     global user_id
-    user_id = await get_user_id_by_telegram_id()
-    if(str(user_id).isnumeric()):
-        cart_items_list = cart_controller.get_cart_items_list(user_id)
-        for product in cart_items_list:
-            product_info = f'''Название товара: {product["id"][1]}
+    try:
+        user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name, telegram_user_nickname)
+        if str(user_id).isnumeric():
+            cart_items_list = cart_controller.get_cart_items_list(user_id)
+            print(cart_items_list)
+            if cart_items_list == "EMPTY":
+                await bot.send_message(message.chat.id, "В вашей корзине нет товаров.")
+            else:
+                for product in cart_items_list:
+                    product_info = f'''Название товара: {product["id"][1]}
 Цена за штуку: {product["id"][2]}
 Описание товара: {product["id"][3]}
 Количество: {product["amount"]}
-            '''
-            keyboards = InlineKeyboardMarkup()
-            keyboards.add(InlineKeyboardButton("Убрать одну штуку", callback_data=f'cart_remove_one_{product["id"][0]}'))
-            keyboards.add(InlineKeyboardButton("Убрать из корзины", callback_data=f'cart_remove_all_{product["id"][0]}'))
-            await bot.send_message(message.chat.id, text=product_info, reply_markup=keyboards)
-
+                    '''
+                    keyboards = InlineKeyboardMarkup()
+                    keyboards.add(InlineKeyboardButton("Убрать одну штуку", callback_data=f'cart_remove_one_{product["id"][0]}'))
+                    keyboards.add(InlineKeyboardButton("Убрать из корзины", callback_data=f'cart_remove_all_{product["id"][0]}'))
+                    await bot.send_message(message.chat.id, text=product_info, reply_markup=keyboards)
+                if len(cart_items_list) > 0:
+                    keyboards = InlineKeyboardMarkup()
+                    keyboards.add(InlineKeyboardButton("Оформить", callback_data='order_create'))
+                    await bot.send_message(message.chat.id, text="Желаете оформить заказ?", reply_markup=keyboards)
+    except Exception as e:
+        print(e)
 
 async def cart_remove_callback(call: types.CallbackQuery):
     product_id = call.data.split("_")[3]
@@ -106,14 +158,19 @@ async def cart_remove_callback(call: types.CallbackQuery):
                 except Exception as e:
                     print(e)
 
+
 async def admin_page_command_handler(message: types.Message):
     await BotStates.admin.set()
-    keyboards = InlineKeyboardMarkup()
     await user_information(message)
-    # Кнопки админа
-    keyboards.add(InlineKeyboardButton("Заказы", callback_data='list_orders'))
-    keyboards.add(InlineKeyboardButton("Пользователи", callback_data='list_users'))
-    await bot.send_message(message.chat.id, text='Выберите действие', reply_markup=keyboards)
+    user = user_controller.get_user(telegram_user_id, telegram_user_name, telegram_user_nickname)
+    if user[4] == 1:
+        keyboards = InlineKeyboardMarkup()
+        # Кнопки админа
+        keyboards.add(InlineKeyboardButton("Заказы", callback_data='list_orders'))
+        keyboards.add(InlineKeyboardButton("Пользователи", callback_data='list_users'))
+        await bot.send_message(message.chat.id, text='Выберите действие', reply_markup=keyboards)
+    else:
+        await bot.send_message(message.chat.id, text="Данная функция доступна только администраторам")
 
 
 async def admin_callback_handler(call: types.CallbackQuery):
@@ -129,27 +186,13 @@ async def admin_callback_handler(call: types.CallbackQuery):
 
 async def add_to_cart_handler(callback_query: types.CallbackQuery):
     #
-    user_id = await get_user_id_by_telegram_id()
+    user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name, telegram_user_nickname)
 
     if str(user_id).isnumeric():
         product_id = callback_query.data.split("add_to_cart_")
         await fill_cart(user_id, int(product_id[1]))
+        await bot.answer_callback_query(callback_query_id=callback_query.id, text=f"Товар {product_id[1]} добавлен в корзину", show_alert=False)
     #
-
-
-async def get_user_id_by_telegram_id():
-    try:
-        #user = user_controller.get_user(telegram_user_id)
-        #Не ебу почему, но верхняя запись перестала у меня работать
-        user = user_controller.repository.get_data(additional_condition=f"WHERE telegram_id = {telegram_user_id}")
-        print(f"info: {user} \t {telegram_user_id}")
-        if user == ():
-            user_controller.create(values=[telegram_user_name, str(telegram_user_id), telegram_user_nickname, str(0)])
-            #user = user_controller.get_user(telegram_user_id)
-            user = user_controller.repository.get_data(additional_condition=f"WHERE telegram_id = {telegram_user_id}")
-        return (user[0][0])
-    except Exception as e:
-        return e
 
 
 async def fill_cart(user_id, product_id):
@@ -184,6 +227,7 @@ async def fill_cart(user_id, product_id):
     except Exception as e:
         print(e)
 
+
 #Получение информации о пользователе: его id, имя, ник
 async def user_information(message):
     global telegram_user_id, telegram_user_nickname, telegram_user_name
@@ -193,18 +237,42 @@ async def user_information(message):
         telegram_user_nickname = "\'" + message.from_user.username + "\'"
 
 
+async def order_create_callback(call: types.CallbackQuery):
+    try:
+        global user_id
+        if user_id == -1:
+            user_id = user_controller.get_user_id_by_telegram_id(telegram_user_id, telegram_user_name, telegram_user_nickname)
+        cart_items_list = cart_controller.get_cart_items_list(user_id)
+        sum = 0
+        for product in cart_items_list:
+            sum += int(product["id"][2]) * int(product["amount"])
+        if len(cart_items_list) > 0:
+            order_controller.create(values=[str(user_id), f"\'{json.dumps(cart_items_list)}\'", str(sum)])
+            cart_controller.cart_close(user_id)
+            await call.message.answer(f"Заказ оформлен. Стоимость: {sum}")
+        else:
+            await call.message.answer("Ошибка! Ваша корзина пуста.")
+    except Exception as e:
+        print(e)
+
+
 async def register_handlers(dp):
     dp.register_message_handler(main_page_command_handler, commands='main_page', state='*')
     dp.register_message_handler(catalog_page_command_handler, commands='catalog_page', state='*')
     dp.register_message_handler(cart_page_command_handler, commands='cart_page', state='*')
     dp.register_message_handler(admin_page_command_handler, commands='admin', state='*')
+    dp.register_message_handler(orders_page_command_handler, commands='orders_page', state='*')
 
     dp.register_callback_query_handler(add_to_cart_handler, lambda c: c.data and c.data.startswith("add_to_cart"),
                                        state=BotStates.catalog_page)
     dp.register_callback_query_handler(admin_callback_handler, lambda c: c.data and c.data.startswith("list_"),
                                        state=BotStates.admin)
-    dp.register_callback_query_handler(cart_remove_callback, lambda  c: c.data and c.data.startswith("cart_remove_"),
+    dp.register_callback_query_handler(cart_remove_callback, lambda c: c.data and c.data.startswith("cart_remove_"),
                                        state=BotStates.cart_page)
+    dp.register_callback_query_handler(order_create_callback, lambda c: c.data and c.data.startswith("order_create"),
+                                       state='*')
+    dp.register_callback_query_handler(main_page_callback, lambda c: c.data and c.data.startswith("show_"),
+                                       state=BotStates.main_page)
 
 
 async def main():
